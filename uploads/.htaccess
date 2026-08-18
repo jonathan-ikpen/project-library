@@ -1,0 +1,3 @@
+# uploads/.htaccess
+# Prevent direct access to uploaded files
+Deny from all
