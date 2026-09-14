@@ -9,6 +9,9 @@ CREATE TABLE IF NOT EXISTS users (
     password_hash VARCHAR(255) NOT NULL,
     role ENUM('admin', 'supervisor', 'student') NOT NULL,
     status ENUM('active', 'suspended') DEFAULT 'active',
+    level VARCHAR(50) DEFAULT NULL,
+    mat_no VARCHAR(100) DEFAULT NULL,
+    year INT DEFAULT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 

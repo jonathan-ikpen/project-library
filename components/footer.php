@@ -16,6 +16,6 @@
             <span class="label">&copy; <?= date('Y') ?> DPLS</span>
         </div>
     </footer>
-    <script src="<?= BASE_URL ?>assets/js/app.js"></script>
+    <script src="<?= BASE_URL ?>assets/js/app.js?v=2"></script>
 </body>
 </html>

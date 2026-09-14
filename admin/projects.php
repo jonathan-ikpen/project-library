@@ -9,6 +9,9 @@ global $pdo;
 $q = trim($_GET['q'] ?? '');
 $category_id = (int)($_GET['category'] ?? 0);
 $status = trim($_GET['status'] ?? '');
+$level_filter = trim($_GET['level'] ?? '');
+$year_filter = trim($_GET['year'] ?? '');
+$supervisor_id = (int)($_GET['supervisor_id'] ?? 0);
 
 $query = "
     SELECT p.id, p.title, p.abstract, p.admin_status, p.supervisor_status, p.supervisor_note, u.name as student_name, c.name as category_name
@@ -32,6 +35,18 @@ if ($status) {
     $query .= " AND p.admin_status = ?";
     $params[] = $status;
 }
+if ($level_filter) {
+    $query .= " AND u.level = ?";
+    $params[] = $level_filter;
+}
+if ($year_filter) {
+    $query .= " AND p.year = ?";
+    $params[] = $year_filter;
+}
+if ($supervisor_id) {
+    $query .= " AND p.supervisor_id = ?";
+    $params[] = $supervisor_id;
+}
 
 $query .= " ORDER BY p.created_at DESC";
 
@@ -40,6 +55,24 @@ $stmt->execute($params);
 $projects = $stmt->fetchAll();
 
 $categories = get_categories($pdo);
+
+// Fetch supervisors for filter
+$stmtSupervisors = $pdo->query("SELECT id, name FROM users WHERE role = 'supervisor' ORDER BY name ASC");
+$supervisors = $stmtSupervisors->fetchAll();
+
+// Fetch available years from projects and merge with predefined
+$predefined_years = range(date('Y'), date('Y') - 5);
+$stmtYears = $pdo->query("SELECT DISTINCT year FROM projects ORDER BY year DESC");
+$db_years = $stmtYears->fetchAll(PDO::FETCH_COLUMN);
+$years = array_unique(array_merge($predefined_years, $db_years));
+rsort($years);
+
+// Fetch available levels and merge with predefined
+$predefined_levels = ['M22', 'M23', 'M24', 'M25', 'M26'];
+$stmtLevels = $pdo->query("SELECT DISTINCT level FROM users WHERE role = 'student' AND level IS NOT NULL AND level != '' ORDER BY level ASC");
+$db_levels = $stmtLevels->fetchAll(PDO::FETCH_COLUMN);
+$levels = array_unique(array_merge($predefined_levels, $db_levels));
+sort($levels);
 
 $use_dashboard_layout = true;
 require_once __DIR__ . '/../components/header.php';
@@ -56,27 +89,54 @@ require_once __DIR__ . '/../components/header.php';
     </div>
 </div>
 
-<form method="GET" action="" class="mb-4 filter-form" style="display: grid; grid-template-columns: 1fr 200px 200px auto; gap: 16px; align-items: end;">
-    <div>
+<form method="GET" action="" class="mb-4 filter-form" style="display: flex; flex-wrap: wrap; gap: 16px; align-items: end;">
+    <div style="flex: 1; min-width: 200px;">
         <label class="label mb-1" style="display:block;">Search Projects</label>
-        <input type="text" name="q" value="<?= h($q) ?>" placeholder="Search titles or abstracts..." style="margin-bottom: 0; height: 54px; padding: 0 20px; box-sizing: border-box;">
+        <input type="text" name="q" value="<?= h($q) ?>" placeholder="Search titles or abstracts..." style="margin-bottom: 0; height: 54px; padding: 0 20px; box-sizing: border-box; width: 100%;">
     </div>
-    <div>
-        <label class="label mb-1" style="display:block;">Filter by Category</label>
-        <select name="category" style="margin-bottom: 0;">
+    <div style="min-width: 140px;">
+        <label class="label mb-1" style="display:block;">Category</label>
+        <select name="category" style="margin-bottom: 0; width: 100%;" onchange="this.form.submit()">
             <option value="">All Categories</option>
             <?php foreach ($categories as $cat): ?>
                 <option value="<?= $cat['id'] ?>" <?= $category_id == $cat['id'] ? 'selected' : '' ?>><?= h($cat['name']) ?></option>
             <?php endforeach; ?>
         </select>
     </div>
-    <div>
-        <label class="label mb-1" style="display:block;">Filter by Status</label>
-        <select name="status" style="margin-bottom: 0;">
+    <div style="min-width: 140px;">
+        <label class="label mb-1" style="display:block;">Status</label>
+        <select name="status" style="margin-bottom: 0; width: 100%;" onchange="this.form.submit()">
             <option value="">All Statuses</option>
             <option value="pending" <?= $status === 'pending' ? 'selected' : '' ?>>Pending Review</option>
             <option value="published" <?= $status === 'published' ? 'selected' : '' ?>>Published</option>
             <option value="rejected" <?= $status === 'rejected' ? 'selected' : '' ?>>Rejected</option>
+        </select>
+    </div>
+    <div style="min-width: 120px;">
+        <label class="label mb-1" style="display:block;">Level</label>
+        <select name="level" style="margin-bottom: 0; width: 100%;" onchange="this.form.submit()">
+            <option value="">All Levels</option>
+            <?php foreach ($levels as $l): ?>
+                <option value="<?= h($l) ?>" <?= $level_filter === $l ? 'selected' : '' ?>><?= h($l) ?></option>
+            <?php endforeach; ?>
+        </select>
+    </div>
+    <div style="min-width: 120px;">
+        <label class="label mb-1" style="display:block;">Year</label>
+        <select name="year" style="margin-bottom: 0; width: 100%;" onchange="this.form.submit()">
+            <option value="">All Years</option>
+            <?php foreach ($years as $y): ?>
+                <option value="<?= h($y) ?>" <?= (string)$year_filter === (string)$y ? 'selected' : '' ?>><?= h($y) ?></option>
+            <?php endforeach; ?>
+        </select>
+    </div>
+    <div style="min-width: 150px;">
+        <label class="label mb-1" style="display:block;">Supervisor</label>
+        <select name="supervisor_id" style="margin-bottom: 0; width: 100%;" onchange="this.form.submit()">
+            <option value="">All Supervisors</option>
+            <?php foreach ($supervisors as $sup): ?>
+                <option value="<?= $sup['id'] ?>" <?= $supervisor_id == $sup['id'] ? 'selected' : '' ?>><?= h($sup['name']) ?></option>
+            <?php endforeach; ?>
         </select>
     </div>
     <button type="submit" class="btn" style="height: 54px; padding: 0 32px; margin-bottom: 0; display: inline-flex; align-items: center; justify-content: center; box-sizing: border-box;">Filter</button>

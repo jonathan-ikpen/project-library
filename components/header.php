@@ -8,7 +8,7 @@ require_once __DIR__ . '/../config/init.php';
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>DPLS - Departmental Project Library</title>
-    <link rel="stylesheet" href="<?= BASE_URL ?>assets/css/index.css">
+    <link rel="stylesheet" href="<?= BASE_URL ?>assets/css/index.css?v=2">
     <script>
         // Apply theme immediately to prevent FOUC
         const savedTheme = localStorage.getItem('dpls-theme');
